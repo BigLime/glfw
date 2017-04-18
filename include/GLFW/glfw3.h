@@ -1242,6 +1242,44 @@ typedef struct GLFWimage
  */
 GLFWAPI int glfwInit(void);
 
+/*************************************************************************
+ * GLFW API functions
+ *************************************************************************/
+
+/*! @brief Initializes the GLFW library.
+ *
+ *  This function initializes the GLFW library.  Before most GLFW functions can
+ *  be used, GLFW must be initialized, and before an application terminates GLFW
+ *  should be terminated in order to free any resources allocated during or
+ *  after initialization.
+ *
+ *  If this function fails, it calls @ref glfwTerminate before returning.  If it
+ *  succeeds, you should call @ref glfwTerminate before the application exits.
+ *
+ *  Additional calls to this function after successful initialization but before
+ *  termination will return `GLFW_TRUE` immediately.
+ *
+ *  @return `GLFW_TRUE` if successful, or `GLFW_FALSE` if an
+ *  [error](@ref error_handling) occurred.
+ *
+ *  @errors Possible errors include @ref GLFW_PLATFORM_ERROR.
+ *
+ *  @remark @osx This function will change the current directory of the
+ *  application to the `Contents/Resources` subdirectory of the application's
+ *  bundle, if present.  This can be disabled with a
+ *  [compile-time option](@ref compile_options_osx).
+ *
+ *  @thread_safety This function must only be called from the main thread.
+ *
+ *  @sa @ref intro_init
+ *  @sa glfwTerminate
+ *
+ *  @since Added in version 1.0.
+ *
+ *  @ingroup init
+ */
+GLFWAPI int glfwInitWithoutAutoRelease(void);
+
 /*! @brief Terminates the GLFW library.
  *
  *  This function destroys all remaining windows and cursors, restores any
@@ -1862,6 +1900,25 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height, const char* title, G
  */
 GLFWAPI void glfwDestroyWindow(GLFWwindow* window);
 
+/* NSGL extension */
+
+GLFWAPI GLFWwindow* glfwAttachNSGL(void* nsWindow, void* nsView, void* nsOpenGLContext, void* nsDelegate);
+GLFWAPI void        glfwDetachNSGL(GLFWwindow* window);
+    
+GLFWAPI void        glfwOnMove(GLFWwindow* window);
+GLFWAPI void        glfwOnFocus(GLFWwindow* window, int isFocus);
+GLFWAPI void        glfwOnSize(GLFWwindow* window, float contentRectWidth, float contentRectHeight, float fbRectWidth, float fbRectHeight);
+GLFWAPI void        glfwOnMinSize(GLFWwindow* window);
+GLFWAPI void        glfwOnMaxSize(GLFWwindow* window);
+GLFWAPI void        glfwOnTerminate(GLFWwindow* window);
+    
+GLFWAPI void        glfwInputCursorPos(GLFWwindow* window, double xpos, double ypos);
+GLFWAPI void        glfwInputCursorEnter(GLFWwindow* window, int entered);
+GLFWAPI void        glfwInputMouseClick(GLFWwindow* window, int button, int action, int mods);
+GLFWAPI void        glfwInputKey(GLFWwindow* window, int scancode, int action, int mods);
+GLFWAPI void        glfwInputScroll(GLFWwindow *window, double xoffset, double yoffset);
+GLFWAPI void        glfwInputDrop(GLFWwindow* window, int count, const char** names);
+    
 /*! @brief Checks the close flag of the specified window.
  *
  *  This function returns the value of the close flag of the specified window.
@@ -1996,6 +2053,9 @@ GLFWAPI void glfwSetWindowIcon(GLFWwindow* window, int count, const GLFWimage* i
  */
 GLFWAPI void glfwGetWindowPos(GLFWwindow* window, int* xpos, int* ypos);
 
+// NSGL extension
+GLFWAPI void glfwGetWindowViewPos(GLFWwindow* window, int* xpos, int* ypos);
+
 /*! @brief Sets the position of the client area of the specified window.
  *
  *  This function sets the position, in screen coordinates, of the upper-left
@@ -2057,6 +2117,9 @@ GLFWAPI void glfwSetWindowPos(GLFWwindow* window, int xpos, int ypos);
  */
 GLFWAPI void glfwGetWindowSize(GLFWwindow* window, int* width, int* height);
 
+// NSGL extension
+GLFWAPI void glfwGetWindowViewSize(GLFWwindow* window, int* width, int* height);
+    
 /*! @brief Sets the size limits of the specified window.
  *
  *  This function sets the size limits of the client area of the specified
@@ -2174,6 +2237,9 @@ GLFWAPI void glfwSetWindowAspectRatio(GLFWwindow* window, int numer, int denom);
  *  @ingroup window
  */
 GLFWAPI void glfwSetWindowSize(GLFWwindow* window, int width, int height);
+    
+// NSGL extension.
+GLFWAPI void glfwSetWindowViewSize(GLFWwindow* window, int width, int height);
 
 /*! @brief Retrieves the size of the framebuffer of the specified window.
  *

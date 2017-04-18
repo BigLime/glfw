@@ -141,6 +141,30 @@ GLFWAPI int glfwInit(void)
     return GLFW_TRUE;
 }
 
+GLFWAPI int glfwInitWithoutAutoRelease(void)
+{
+    if (_glfwInitialized)
+        return GLFW_TRUE;
+    
+    memset(&_glfw, 0, sizeof(_glfw));
+    
+    if (!_glfwPlatformInitWithoutAutoRelease())
+    {
+        _glfwPlatformTerminate();
+        return GLFW_FALSE;
+    }
+    
+    _glfw.monitors = _glfwPlatformGetMonitors(&_glfw.monitorCount);
+    _glfwInitialized = GLFW_TRUE;
+    
+    _glfw.timerOffset = _glfwPlatformGetTimerValue();
+    
+    // Not all window hints have zero as their default value
+    glfwDefaultWindowHints();
+    
+    return GLFW_TRUE;
+}
+
 GLFWAPI void glfwTerminate(void)
 {
     int i;

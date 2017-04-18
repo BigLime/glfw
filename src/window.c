@@ -461,6 +461,21 @@ GLFWAPI void glfwGetWindowPos(GLFWwindow* handle, int* xpos, int* ypos)
     _glfwPlatformGetWindowPos(window, xpos, ypos);
 }
 
+GLFWAPI void glfwGetWindowViewPos(GLFWwindow* handle, int* xpos, int* ypos)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+    
+    if (xpos)
+        *xpos = 0;
+    if (ypos)
+        *ypos = 0;
+    
+    _GLFW_REQUIRE_INIT();
+    _glfwPlatformGetWindowViewPos(window, xpos, ypos);
+}
+
+
 GLFWAPI void glfwSetWindowPos(GLFWwindow* handle, int xpos, int ypos)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
@@ -488,6 +503,20 @@ GLFWAPI void glfwGetWindowSize(GLFWwindow* handle, int* width, int* height)
     _glfwPlatformGetWindowSize(window, width, height);
 }
 
+GLFWAPI void glfwGetWindowViewSize(GLFWwindow* handle, int* width, int* height)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+    
+    if (width)
+        *width = 0;
+    if (height)
+        *height = 0;
+    
+    _GLFW_REQUIRE_INIT();
+    _glfwPlatformGetWindowViewSize(window, width, height);
+}
+
 GLFWAPI void glfwSetWindowSize(GLFWwindow* handle, int width, int height)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
@@ -499,6 +528,19 @@ GLFWAPI void glfwSetWindowSize(GLFWwindow* handle, int width, int height)
     window->videoMode.height = height;
 
     _glfwPlatformSetWindowSize(window, width, height);
+}
+
+GLFWAPI void glfwSetWindowViewSize(GLFWwindow* handle, int width, int height)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+    
+    _GLFW_REQUIRE_INIT();
+    
+    window->videoMode.width  = width;
+    window->videoMode.height = height;
+    
+    _glfwPlatformSetWindowViewSize(window, width, height);
 }
 
 GLFWAPI void glfwSetWindowSizeLimits(GLFWwindow* handle,
@@ -900,5 +942,210 @@ GLFWAPI void glfwPostEmptyEvent(void)
         return;
 
     _glfwPlatformPostEmptyEvent();
+}
+
+GLFWAPI GLFWwindow* glfwAttachNSGL(void* nsWindow, void* nsView, void* nsOpenGLContext, void* nsDelegate)
+{
+    _GLFWfbconfig fbconfig;
+    _GLFWctxconfig ctxconfig;
+    _GLFWwndconfig wndconfig;
+    _GLFWwindow* window;
+    _GLFWwindow* previous;
+    
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
+    
+    fbconfig  = _glfw.hints.framebuffer;
+    ctxconfig = _glfw.hints.context;
+    wndconfig = _glfw.hints.window;
+    
+    wndconfig.width   = 0;
+    wndconfig.height  = 0;
+    wndconfig.title   = 0;
+    ctxconfig.share   = NULL;
+    
+    if (ctxconfig.share)
+    {
+        if (ctxconfig.client == GLFW_NO_API ||
+            ctxconfig.share->context.client == GLFW_NO_API)
+        {
+            _glfwInputError(GLFW_NO_WINDOW_CONTEXT, NULL);
+            return NULL;
+        }
+    }
+    
+    if (!_glfwIsValidContextConfig(&ctxconfig))
+        return NULL;
+    
+    window = calloc(1, sizeof(_GLFWwindow));
+    window->next = _glfw.windowListHead;
+    _glfw.windowListHead = window;
+    
+    window->videoMode.width       = 0;
+    window->videoMode.height      = 0;
+    window->videoMode.redBits     = fbconfig.redBits;
+    window->videoMode.greenBits   = fbconfig.greenBits;
+    window->videoMode.blueBits    = fbconfig.blueBits;
+    window->videoMode.refreshRate = _glfw.hints.refreshRate;
+    
+    window->monitor     = NULL;
+    window->resizable   = wndconfig.resizable;
+    window->decorated   = wndconfig.decorated;
+    window->autoIconify = wndconfig.autoIconify;
+    window->floating    = wndconfig.floating;
+    window->cursorMode  = GLFW_CURSOR_NORMAL;
+    
+    window->minwidth    = GLFW_DONT_CARE;
+    window->minheight   = GLFW_DONT_CARE;
+    window->maxwidth    = GLFW_DONT_CARE;
+    window->maxheight   = GLFW_DONT_CARE;
+    window->numer       = GLFW_DONT_CARE;
+    window->denom       = GLFW_DONT_CARE;
+    
+    // Save the currently current context so it can be restored later
+    previous = _glfwPlatformGetCurrentContext();
+    if (ctxconfig.client != GLFW_NO_API)
+        glfwMakeContextCurrent(NULL);
+    
+    // Open the actual window and create its context
+    if (!_glfwPlatformAttachWindow(window, nsWindow, nsView, nsDelegate, nsOpenGLContext))
+    {
+        glfwMakeContextCurrent((GLFWwindow*) previous);
+        glfwDestroyWindow((GLFWwindow*) window);
+        return NULL;
+    }
+    
+    if (ctxconfig.client != GLFW_NO_API)
+    {
+        window->context.makeCurrent(window);
+        
+        // Retrieve the actual (as opposed to requested) context attributes
+        if (!_glfwRefreshContextAttribs(&ctxconfig))
+        {
+            glfwMakeContextCurrent((GLFWwindow*) previous);
+            glfwDestroyWindow((GLFWwindow*) window);
+            return NULL;
+        }
+        
+        // Restore the previously current context (or NULL)
+        glfwMakeContextCurrent((GLFWwindow*) previous);
+    }
+    
+    if (!window->monitor)
+    {
+        if (wndconfig.visible)
+        {
+            _glfwPlatformShowWindow(window);
+            if (wndconfig.focused)
+                _glfwPlatformFocusWindow(window);
+        }
+    }
+    
+    return (GLFWwindow*) window;
+}
+
+GLFWAPI void glfwDetachNSGL(GLFWwindow* glfwWindow)
+{
+    _glfwPlatformDetachWindow((_GLFWwindow*)glfwWindow);
+}
+
+GLFWAPI void glfwOnMove(GLFWwindow* window)
+{
+    // _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    
+    // int x, y;
+    // _glfwPlatformGetWindowPos(inWnd, &x, &y);
+    // _glfwInputWindowPos(inWnd, x, y);
+}
+
+GLFWAPI void glfwOnFocus(GLFWwindow* window, int isFocus)
+{
+    _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    
+    _glfwInputWindowFocus(inWnd, isFocus);
+    
+    if (isFocus == GLFW_TRUE)
+        _glfwPlatformSetCursorMode(inWnd, inWnd->cursorMode);
+}
+
+GLFWAPI void glfwOnSize(GLFWwindow* window, float contentRectWidth, float contentRectHeight, float fbRectWidth, float fbRectHeight)
+{
+    _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    
+    _glfwInputFramebufferSize(inWnd, fbRectWidth, fbRectHeight);
+    _glfwInputWindowSize(inWnd, contentRectWidth, contentRectHeight);
+}
+
+GLFWAPI void glfwOnMinSize(GLFWwindow* window)
+{
+    // _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    //
+    // if (inWnd->monitor)
+    // {
+    //    if (inWnd->monitor->window == inWnd)
+    //    {
+    //        _glfwInputMonitorWindowChange(inWnd->monitor, NULL);
+    //        _glfwRestoreVideoModeNS(inWnd->monitor);
+    //    }
+    // }
+    //
+    // _glfwInputWindowIconify(inWnd, GLFW_TRUE);
+}
+
+GLFWAPI void glfwOnMaxSize(GLFWwindow* window)
+{
+    // _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    
+    // if (inWnd->monitor)
+    // {
+    //     if (inWnd->monitor->window == inWnd)
+    //     {
+    //         _glfwInputMonitorWindowChange(inWnd->monitor, NULL);
+    //         _glfwRestoreVideoModeNS(inWnd->monitor);
+    //     }
+    // }
+    
+    // _glfwInputWindowIconify(inWnd, GLFW_FALSE);
+}
+
+GLFWAPI void glfwOnTerminate(GLFWwindow* window)
+{
+    _GLFWwindow* inWnd = (_GLFWwindow*)window;
+    _glfwInputWindowCloseRequest(inWnd);
+}
+
+GLFWAPI void glfwInputCursorPos(GLFWwindow* window, double xpos, double ypos)
+{
+    _GLFWwindow* _winodw = (_GLFWwindow*)window;
+    _glfwInputCursorPos(_winodw, xpos, ypos);
+}
+
+GLFWAPI void glfwInputCursorEnter(GLFWwindow* window, int entered)
+{
+    _GLFWwindow* _window = (_GLFWwindow*)window;
+    _glfwInputCursorEnter(_window, entered);
+}
+
+GLFWAPI void glfwInputMouseClick(GLFWwindow* window, int button, int action, int mods)
+{
+    _GLFWwindow* _window = (_GLFWwindow*)window;
+    _glfwInputMouseClickInternal(_window, button, action, mods);
+}
+
+GLFWAPI void glfwInputKey(GLFWwindow* window, int scancode, int action, int mods)
+{
+    _GLFWwindow* _window = (_GLFWwindow*)window;
+    _glfwInputKeyInternal(_window, scancode, action, mods);
+}
+
+GLFWAPI void glfwInputScroll(GLFWwindow *window, double xoffset, double yoffset)
+{
+    _GLFWwindow* _window = (_GLFWwindow*)window;
+    _glfwInputScroll(_window, xoffset, yoffset);
+}
+
+GLFWAPI void glfwInputDrop(GLFWwindow* window, int count, const char** names)
+{
+    _GLFWwindow* _window = (_GLFWwindow*)window;
+    _glfwInputDrop(_window, count, names);
 }
 

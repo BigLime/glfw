@@ -508,6 +508,13 @@ extern _GLFWlibrary _glfw;
  */
 int _glfwPlatformInit(void);
 
+/*! @brief Initializes the platform-specific part of the library.
+ *  @return `GLFW_TRUE` if successful, or `GLFW_FALSE` if an error occurred.
+ *  @ingroup platform
+ */
+int _glfwPlatformInitWithoutAutoRelease(void);
+
+
 /*! @brief Terminates the platform-specific part of the library.
  *  @ingroup platform
  */
@@ -634,6 +641,11 @@ int _glfwPlatformCreateWindow(_GLFWwindow* window,
 
 /*! @ingroup platform
  */
+int _glfwPlatformAttachWindow(_GLFWwindow* window, void* nsWindow, void* nsView, void* nsDelegate, void* nsOpenGLContext);
+int _glfwPlatformDetachWindow(_GLFWwindow* window);
+
+/*! @ingroup platform
+ */
 void _glfwPlatformDestroyWindow(_GLFWwindow* window);
 
 /*! @copydoc glfwSetWindowTitle
@@ -651,6 +663,11 @@ void _glfwPlatformSetWindowIcon(_GLFWwindow* window, int count, const GLFWimage*
  */
 void _glfwPlatformGetWindowPos(_GLFWwindow* window, int* xpos, int* ypos);
 
+/*! @copydoc glfwGetWindowViewPos
+ *  @ingroup platform
+ */
+void _glfwPlatformGetWindowViewPos(_GLFWwindow* window, int* xpos, int* ypos);
+
 /*! @copydoc glfwSetWindowPos
  *  @ingroup platform
  */
@@ -661,10 +678,20 @@ void _glfwPlatformSetWindowPos(_GLFWwindow* window, int xpos, int ypos);
  */
 void _glfwPlatformGetWindowSize(_GLFWwindow* window, int* width, int* height);
 
+/*! @copydoc glfwGetWindowSize
+ *  @ingroup platform
+ */
+void _glfwPlatformGetWindowViewSize(_GLFWwindow* window, int* width, int* height);
+
 /*! @copydoc glfwSetWindowSize
  *  @ingroup platform
  */
 void _glfwPlatformSetWindowSize(_GLFWwindow* window, int width, int height);
+
+/*! @copydoc glfwSetWindowViewSize
+ *  @ingroup platform
+ */
+void _glfwPlatformSetWindowViewSize(_GLFWwindow* window, int width, int height);
 
 /*! @copydoc glfwSetWindowSizeLimits
  *  @ingroup platform
@@ -868,6 +895,7 @@ void _glfwInputWindowMonitorChange(_GLFWwindow* window, _GLFWmonitor* monitor);
  *  @param[in] mods The modifiers pressed when the event was generated.
  *  @ingroup event
  */
+void _glfwInputKeyInternal(_GLFWwindow* window, int scancode, int action, int mods);
 void _glfwInputKey(_GLFWwindow* window, int key, int scancode, int action, int mods);
 
 /*! @brief Notifies shared code of a Unicode character input event.
@@ -894,6 +922,7 @@ void _glfwInputScroll(_GLFWwindow* window, double xoffset, double yoffset);
  *  @param[in] action @ref GLFW_PRESS or @ref GLFW_RELEASE.
  *  @ingroup event
  */
+void _glfwInputMouseClickInternal(_GLFWwindow* window, int button, int action, int rawMods);
 void _glfwInputMouseClick(_GLFWwindow* window, int button, int action, int mods);
 
 /*! @brief Notifies shared code of a cursor motion event.

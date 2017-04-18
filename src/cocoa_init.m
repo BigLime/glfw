@@ -331,6 +331,41 @@ int _glfwPlatformInit(void)
     return GLFW_TRUE;
 }
 
+int _glfwPlatformInitWithoutAutoRelease(void)
+{
+    _glfw.ns.autoreleasePool = nil;
+    
+    _glfw.ns.listener = [[GLFWLayoutListener alloc] init];
+    [[NSDistributedNotificationCenter defaultCenter]
+     addObserver:_glfw.ns.listener
+     selector:@selector(selectedKeyboardInputSourceChanged:)
+     name:(__bridge NSString*)kTISNotifySelectedKeyboardInputSourceChanged
+     object:nil];
+    
+#if defined(_GLFW_USE_CHDIR)
+    changeToResourcesDirectory();
+#endif
+    
+    createKeyTables();
+    
+    _glfw.ns.eventSource = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    if (!_glfw.ns.eventSource)
+        return GLFW_FALSE;
+    
+    CGEventSourceSetLocalEventsSuppressionInterval(_glfw.ns.eventSource, 0.0);
+    
+    if (!initializeTIS())
+        return GLFW_FALSE;
+    
+    if (!_glfwInitThreadLocalStoragePOSIX())
+        return GLFW_FALSE;
+    
+    _glfwInitTimerNS();
+    _glfwInitJoysticksNS();
+    
+    return GLFW_TRUE;
+}
+
 void _glfwPlatformTerminate(void)
 {
     if (_glfw.ns.inputSource)
@@ -374,8 +409,11 @@ void _glfwPlatformTerminate(void)
     _glfwTerminateJoysticksNS();
     _glfwTerminateThreadLocalStoragePOSIX();
 
-    [_glfw.ns.autoreleasePool release];
-    _glfw.ns.autoreleasePool = nil;
+    if (_glfw.ns.autoreleasePool != nil)
+    {
+        [_glfw.ns.autoreleasePool release];
+        _glfw.ns.autoreleasePool = nil;
+    }
 }
 
 const char* _glfwPlatformGetVersionString(void)

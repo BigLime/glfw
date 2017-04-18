@@ -57,4 +57,7 @@ GLFWbool _glfwCreateContextNSGL(_GLFWwindow* window,
                                 const _GLFWfbconfig* fbconfig);
 void _glfwDestroyContextNSGL(_GLFWwindow* window);
 
+GLFWbool _glfwAttachContextNSGL(_GLFWwindow* window, void* context);
+void     _glfwDetachContextNSGL(_GLFWwindow* window);
+
 #endif // _glfw3_nsgl_context_h_

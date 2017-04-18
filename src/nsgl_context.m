@@ -306,3 +306,29 @@ GLFWAPI id glfwGetNSGLContext(GLFWwindow* handle)
     return window->context.nsgl.object;
 }
 
+// extension for manual NSOpenGLContext.
+GLFWbool _glfwAttachContextNSGL(_GLFWwindow* window, void* context)
+{
+    NSOpenGLContext* ctx = (NSOpenGLContext*)context;
+    
+    window->context.nsgl.pixelFormat = ctx.pixelFormat;
+    window->context.nsgl.object      = ctx;
+    
+    [window->context.nsgl.object setView:window->ns.view];
+    
+    window->context.makeCurrent         = makeContextCurrentNSGL;
+    window->context.swapBuffers         = swapBuffersNSGL;
+    window->context.swapInterval        = swapIntervalNSGL;
+    window->context.extensionSupported  = extensionSupportedNSGL;
+    window->context.getProcAddress      = getProcAddressNSGL;
+    window->context.destroy             = _glfwDetachContextNSGL;
+    
+    return GLFW_TRUE;
+}
+
+void _glfwDetachContextNSGL(_GLFWwindow* window)
+{
+    window->context.nsgl.pixelFormat = nil;
+    window->context.nsgl.object      = nil;
+}
+
